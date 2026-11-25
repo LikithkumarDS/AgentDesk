@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Agentic Content Studio</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex">
+
+  <!-- Sidebar -->
+  <aside class="w-64 bg-slate-900 border-r border-slate-800 p-6 hidden md:flex flex-col justify-between">
+    <div>
+      <div class="flex items-center gap-2 mb-8">
+        <span class="text-2xl">⚡</span>
+        <h1 class="text-lg font-bold tracking-tight text-white">Content Studio</h1>
+      </div>
+
+      <nav class="space-y-2 text-sm">
+        <button onclick="switchTab('pipeline')" id="nav-pipeline" class="w-full text-left px-3 py-2.5 rounded-lg bg-indigo-600 text-white font-medium">
+          🛠️ Active Pipeline
+        </button>
+        <button onclick="switchTab('archive')" id="nav-archive" class="w-full text-left px-3 py-2.5 rounded-lg text-slate-400 hover:bg-slate-800 hover:text-white transition">
+          📂 Saved Archive (<span id="archiveCount">0</span>)
+        </button>
+      </nav>
+    </div>
+
+    <div class="text-xs text-slate-500 border-t border-slate-800 pt-4">
+      <p>Model: <span class="text-slate-300">gemini-2.0-flash</span></p>
+      <p class="mt-1">Status: <span class="text-emerald-400">● Online</span></p>
+    </div>
+  </aside>
+
+  <!-- Main Content -->
+  <main class="flex-1 p-6 md:p-10 max-w-6xl mx-auto w-full">
+
+    <!-- Top KPI Row -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+      <div class="bg-slate-900 border border-slate-800 rounded-xl p-4">
+        <p class="text-xs text-slate-400 uppercase">Pipeline Status</p>
+        <p id="kpiStatus" class="text-xl font-bold text-white mt-1">Idle</p>
+      </div>
+      <div class="bg-slate-900 border border-slate-800 rounded-xl p-4">
+        <p class="text-xs text-slate-400 uppercase">Topics Found</p>
+        <p id="kpiTopics" class="text-xl font-bold text-indigo-400 mt-1">0</p>
+      </div>
+      <div class="bg-slate-900 border border-slate-800 rounded-xl p-4">
+        <p class="text-xs text-slate-400 uppercase">Draft Score</p>
+        <p id="kpiScore" class="text-xl font-bold text-amber-400 mt-1">N/A</p>
+      </div>
+      <div class="bg-slate-900 border border-slate-800 rounded-xl p-4">
+        <p class="text-xs text-slate-400 uppercase">Saved Articles</p>
+        <p id="kpiSaved" class="text-xl font-bold text-emerald-400 mt-1">0</p>
+      </div>
+    </div>
+
+    <!-- Status Banner -->
+    <div id="statusBanner" class="hidden mb-6 p-4 rounded-xl text-sm font-medium"></div>
+
+    <!-- TAB 1: ACTIVE PIPELINE -->
+    <section id="tab-pipeline">
+      <!-- Search Bar -->
+      <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 mb-8">
+        <label class="block text-sm font-semibold text-slate-300 mb-2">1. Research Niche / Industry</label>
+        <div class="flex flex-col sm:flex-row gap-3">
+          <input id="nicheInput" type="text" placeholder="e.g., Electric Road Trips, AI Agents, Sustainable Tech"
+                 class="flex-1 bg-slate-950 border border-slate-700 rounded-lg px-4 py-2.5 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+          <button id="researchBtn" onclick="runResearch()"
+                  class="bg-indigo-600 hover:bg-indigo-500 text-white font-medium px-6 py-2.5 rounded-lg transition disabled:opacity-50">
+            🔎 Scout Trends
+          </button>
+        </div>
+      </div>
+
+      <!-- Topic Cards -->
+      <div id="topicsSection" class="hidden mb-8">
+        <h2 class="text-lg font-bold text-white mb-4">2. Select a Trending Topic</h2>
+        <div id="topicsGrid" class="grid gap-4 md:grid-cols-3"></div>
+      </div>
+
+      <!-- Workspace: Article + Review -->
+      <div id="workspaceSection" class="hidden grid gap-6 lg:grid-cols-5">
+        <!-- Article Card (3 cols) -->
+        <div class="lg:col-span-3 bg-slate-900 border border-slate-800 rounded-xl p-6">
+          <div class="flex justify-between items-center mb-4">
+            <h2 class="text-lg font-bold text-white">✍️ Generated Draft</h2>
+            <span id="versionBadge" class="text-xs bg-slate-800 text-slate-300 px-2.5 py-1 rounded-full">Draft v1</span>
+          </div>
+          <h3 id="artTitle" class="text-2xl font-bold text-indigo-400 mb-3"></h3>
+          <p id="artHook" class="text-slate-300 italic border-l-2 border-indigo-500 pl-3 mb-4 text-sm"></p>
+          <div id="artBody" class="text-slate-200 whitespace-pre-line leading-relaxed text-sm mb-5"></div>
+          <div class="bg-slate-950 border border-slate-800 p-3.5 rounded-lg text-sm text-slate-300 mb-5">
+            <strong class="text-indigo-400">Call to Action:</strong> <span id="artCta"></span>
+          </div>
+          <div class="flex gap-3">
+            <button onclick="saveToArchive()" class="flex-1 bg-slate-800 hover:bg-slate-700 text-white text-sm font-medium py-2.5 rounded-lg transition">
+              💾 Save to Archive
+            </button>
+            <button onclick="downloadArticle()" class="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-medium py-2.5 rounded-lg transition">
+              📥 Download .txt
+            </button>
+          </div>
+        </div>
+
+        <!-- Review Card (2 cols) -->
+        <div id="reviewCard" class="lg:col-span-2 bg-slate-900 border border-slate-800 rounded-xl p-6 h-fit">
+          <div class="flex justify-between items-center mb-4">
+            <h2 class="text-lg font-bold text-white">🧐 Editorial Review</h2>
+            <span id="scoreBadge" class="text-lg font-bold px-3 py-1 rounded-lg"></span>
+          </div>
+
+          <div class="space-y-4 text-sm">
+            <div>
+              <p class="font-semibold text-emerald-400 mb-1">✅ Strengths</p>
+              <ul id="revStrengths" class="list-disc list-inside text-slate-300 space-y-1"></ul>
+            </div>
+            <div>
+              <p class="font-semibold text-amber-400 mb-1">⚠️ Weaknesses</p>
+              <ul id="revWeaknesses" class="list-disc list-inside text-slate-300 space-y-1"></ul>
+            </div>
+            <div>
+              <p class="font-semibold text-indigo-400 mb-1">💡 Suggestions</p>
+              <p id="revSuggestions" class="text-slate-300"></p>
+            </div>
+            <div>
+              <p class="font-semibold text-slate-400 mb-1">🔍 Fact-Check Notes</p>
+              <p id="revFactCheck" class="text-slate-400 text-xs"></p>
+            </div>
+          </div>
+
+          <button id="refineBtn" onclick="runRefinement()"
+                  class="mt-6 w-full bg-amber-600 hover:bg-amber-500 text-white font-medium py-2.5 rounded-lg transition">
+            ✨ Apply Feedback & Refine
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 2: ARCHIVE -->
+    <section id="tab-archive" class="hidden">
+      <h2 class="text-xl font-bold text-white mb-4">📂 Saved Articles</h2>
+      <div id="archiveList" class="space-y-4">
+        <p class="text-slate-400 text-sm">No articles saved yet. Generate and save an article from the Active Pipeline.</p>
+      </div>
+    </section>
+
+  </main>
+
+  <script>
+    let topics = [];
+    let currentArticle = null;
+    let currentReview = null;
+    let archive = [];
+
+    function switchTab(tab) {
+      document.getElementById('tab-pipeline').classList.toggle('hidden', tab !== 'pipeline');
+      document.getElementById('tab-archive').classList.toggle('hidden', tab !== 'archive');
+      document.getElementById('nav-pipeline').className = tab === 'pipeline'
+        ? "w-full text-left px-3 py-2.5 rounded-lg bg-indigo-600 text-white font-medium"
+        : "w-full text-left px-3 py-2.5 rounded-lg text-slate-400 hover:bg-slate-800 hover:text-white transition";
+      document.getElementById('nav-archive').className = tab === 'archive'
+        ? "w-full text-left px-3 py-2.5 rounded-lg bg-indigo-600 text-white font-medium"
+        : "w-full text-left px-3 py-2.5 rounded-lg text-slate-400 hover:bg-slate-800 hover:text-white transition";
+    }
+
+    function setStatus(msg, type = 'info') {
+      const el = document.getElementById('statusBanner');
+      el.className = type === 'error'
+        ? "mb-6 p-4 rounded-xl text-sm font-medium bg-red-950/60 border border-red-800 text-red-200"
+        : "mb-6 p-4 rounded-xl text-sm font-medium bg-indigo-950/60 border border-indigo-800 text-indigo-200";
+      el.textContent = msg;
+      el.classList.remove('hidden');
+    }
+
+    function clearStatus() {
+      document.getElementById('statusBanner').classList.add('hidden');
+    }
+
+    async function runResearch() {
+      const niche = document.getElementById('nicheInput').value.trim();
+      if (!niche) return setStatus("Please enter a niche first.", "error");
+
+      document.getElementById('kpiStatus').textContent = "Researching...";
+      setStatus(`Researcher Agent is scouting trends for "${niche}"...`);
+      document.getElementById('researchBtn').disabled = true;
+
+      try {
+        const res = await fetch('/api/research', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ niche })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || "Research failed");
+
+        topics = data.suggested_topics;
+        document.getElementById('kpiTopics').textContent = topics.length;
+        document.getElementById('kpiStatus').textContent = "Topics Ready";
+        renderTopics();
+        clearStatus();
+      } catch (err) {
+        setStatus(err.message, "error");
+        document.getElementById('kpiStatus').textContent = "Error";
+      } finally {
+        document.getElementById('researchBtn').disabled = false;
+      }
+    }
+
+    function renderTopics() {
+      const grid = document.getElementById('topicsGrid');
+      grid.innerHTML = '';
+      topics.forEach((t, i) => {
+        const card = document.createElement('div');
+        card.className = "bg-slate-900 border border-slate-800 rounded-xl p-5 flex flex-col justify-between hover:border-indigo-500 transition";
+        card.innerHTML = `
+          <div>
+            <h3 class="font-bold text-white mb-2">${t.title}</h3>
+            <p class="text-xs text-slate-400 mb-3">${t.description}</p>
+            <p class="text-xs text-amber-400">🔥 ${t.why_now}</p>
+          </div>
+          <button onclick="writeAndReview(${i})" class="mt-4 w-full bg-slate-800 hover:bg-indigo-600 text-white text-xs font-medium py-2.5 rounded-lg transition">
+            Select & Draft Article
+          </button>
+        `;
+        grid.appendChild(card);
+      });
+      document.getElementById('topicsSection').classList.remove('hidden');
+    }
+
+    async function writeAndReview(index) {
+      const topic = topics[index];
+      document.getElementById('kpiStatus').textContent = "Writing...";
+      setStatus(`Writer Agent is drafting "${topic.title}"...`);
+
+      try {
+        const writeRes = await fetch('/api/write', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(topic)
+        });
+        currentArticle = await writeRes.json();
+        if (!writeRes.ok) throw new Error(currentArticle.detail || "Writing failed");
+
+        renderArticle(currentArticle, "Draft v1");
+        document.getElementById('workspaceSection').classList.remove('hidden');
+
+        document.getElementById('kpiStatus').textContent = "Reviewing...";
+        setStatus("Reviewer Agent is auditing draft quality...");
+
+        const revRes = await fetch('/api/review', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(currentArticle)
+        });
+        currentReview = await revRes.json();
+        if (!revRes.ok) throw new Error(currentReview.detail || "Review failed");
+
+        renderReview(currentReview);
+        document.getElementById('kpiStatus').textContent = "Complete";
+        clearStatus();
+      } catch (err) {
+        setStatus(err.message, "error");
+        document.getElementById('kpiStatus').textContent = "Error";
+      }
+    }
+
+    function renderArticle(art, version) {
+      document.getElementById('artTitle').textContent = art.title;
+      document.getElementById('artHook').textContent = art.hook;
+      document.getElementById('artBody').textContent = art.body;
+      document.getElementById('artCta').textContent = art.call_to_action;
+      document.getElementById('versionBadge').textContent = version;
+    }
+
+    function renderReview(rev) {
+      document.getElementById('kpiScore').textContent = `${rev.score}/10`;
+      const badge = document.getElementById('scoreBadge');
+      badge.textContent = `${rev.score}/10`;
+      badge.className = rev.score >= 8
+        ? "text-lg font-bold px-3 py-1 rounded-lg bg-emerald-950 text-emerald-400 border border-emerald-800"
+        : rev.score >= 5
+        ? "text-lg font-bold px-3 py-1 rounded-lg bg-amber-950 text-amber-400 border border-amber-800"
+        : "text-lg font-bold px-3 py-1 rounded-lg bg-red-950 text-red-400 border border-red-800";
+
+      document.getElementById('revStrengths').innerHTML = rev.strengths.map(s => `<li>${s}</li>`).join('');
+      document.getElementById('revWeaknesses').innerHTML = rev.weaknesses.map(w => `<li>${w}</li>`).join('');
+      document.getElementById('revSuggestions').textContent = rev.improvement_suggestions;
+      document.getElementById('revFactCheck').textContent = rev.fact_check_notes;
+      document.getElementById('refineBtn').classList.toggle('hidden', rev.score >= 9);
+    }
+
+    async function runRefinement() {
+      document.getElementById('kpiStatus').textContent = "Refining...";
+      setStatus("Writer Agent is refining the article based on feedback...");
+
+      try {
+        const res = await fetch('/api/refine', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ article: currentArticle, review: currentReview })
+        });
+        currentArticle = await res.json();
+        if (!res.ok) throw new Error(currentArticle.detail || "Refinement failed");
+
+        renderArticle(currentArticle, "Refined Final");
+        document.getElementById('kpiStatus').textContent = "Refined";
+        clearStatus();
+      } catch (err) {
+        setStatus(err.message, "error");
+      }
+    }
+
+    function saveToArchive() {
+      if (!currentArticle || !currentReview) return;
+      archive.unshift({ article: currentArticle, review: currentReview, time: new Date().toLocaleTimeString() });
+      document.getElementById('kpiSaved').textContent = archive.length;
+      document.getElementById('archiveCount').textContent = archive.length;
+      renderArchive();
+      setStatus("Saved to Archive!");
+      setTimeout(clearStatus, 2500);
+    }
+
+    function renderArchive() {
+      const list = document.getElementById('archiveList');
+      list.innerHTML = archive.map(item => `
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-5">
+          <div class="flex justify-between items-center mb-2">
+            <h3 class="font-bold text-indigo-400">${item.article.title}</h3>
+            <span class="text-xs text-slate-400">Score: ${item.review.score}/10 • ${item.time}</span>
+          </div>
+          <p class="text-sm text-slate-300 whitespace-pre-line">${item.article.body}</p>
+        </div>
+      `).join('');
+    }
+
+    function downloadArticle() {
+      if (!currentArticle) return;
+      const text = `TITLE: ${currentArticle.title}\n\nHOOK:\n${currentArticle.hook}\n\nBODY:\n${currentArticle.body}\n\nCALL TO ACTION:\n${currentArticle.call_to_action}`;
+      const blob = new Blob([text], { type: 'text/plain' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `${currentArticle.title.replace(/[^a-zA-Z0-9_-]/g, '_')}.txt`;
+      a.click();
+    }
+  </script>
+</body>
+</html>
