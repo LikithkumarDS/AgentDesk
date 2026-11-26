@@ -24,7 +24,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-MODEL_ID = "gemini-3.8-flash"
+MODEL_ID = "gemini-3.5-flash-lite"
 client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 
 writer = WriterAgent()
